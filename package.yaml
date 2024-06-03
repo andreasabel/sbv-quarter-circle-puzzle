@@ -1,0 +1,10 @@
+name: puzzle-two
+
+dependencies:
+- base
+- containers
+- sbv
+
+executable:
+  source-dirs: src
+  main: Main.hs
