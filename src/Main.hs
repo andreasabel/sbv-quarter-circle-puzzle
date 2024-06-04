@@ -1,8 +1,11 @@
--- | Puzzle 2 of CS retreat 2024
-
+{-# LANGUAGE DeriveTraversable #-}
+{-# LANGUAGE DeriveFoldable #-}
+{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE UnicodeSyntax #-}
 {-# LANGUAGE ImportQualifiedPost #-}
+
+-- | Puzzle 2 of CS retreat 2024
 
 -- import Prelude hiding (pi)
 
@@ -90,11 +93,6 @@ data Coloring = C
 
 type ColorMap = [Coloring]
 
-invariantColoring :: Coloring -> Line -> Bool
-invariantColoring (C ma si) = \case
-  OO -> ma == si
-  _  -> ma /= si
-
 coloring1 :: ColorMap
 coloring1 = concat
   [ [ C 0 1, C 1 0, C 0 2, C 2 2 ]
@@ -103,15 +101,28 @@ coloring1 = concat
   , [ C 6 5, C 6 7, C 0 7, C 0 8 ]
   ]
 
+invariantColoring :: Coloring -> Line -> Bool
+invariantColoring (C ma si) = \case
+  OO -> ma == si
+  _  -> ma /= si
+
+invariantColorMap :: ColorMap -> Solution -> Bool
+invariantColorMap col sol = and $ zipWith invariantColoring col sol
+
+icm1 = invariantColorMap coloring1 solution1
+
 -- ** Partitioning (old-style coloring)
 ------------------------------------------------------------------------
 
 type Partition = [Partitioning]
+type Partitioning = P ID
 
--- | Divide each square via the diagonals into 4 areas, each of which
--- gets an ID of its cluser.
-data Partitioning = P { north, west, south, east :: ID }
-  deriving (Show, Eq)
+-- | The four edges of a square.
+data P a = P { north, west, south, east :: a }
+  deriving (Show, Eq, Functor, Foldable, Traversable)
+
+zipWithP :: (a -> b -> c) -> P a -> P b -> P c
+zipWithP f (P n w s e) (P n' w' s' e') = P (f n n') (f w w') (f s s') (f e e')
 
 partition1 :: Partition
 partition1 = concat
@@ -178,33 +189,14 @@ coordinates dim = [0 .. size dim - 1]
 -- | Check that the neighbors have the correct color.
 validColoring :: Dim -> Partition -> Coord -> Coloring -> Line -> Bool
 validColoring dim part coord c@(C ma si) line =
-  case line of
-    NW -> and [ maybe True ((si ==) . south) $ (part !?) =<< goNorth dim coord
-              , maybe True ((si ==) . east ) $ (part !?) =<< goWest  dim coord
-              , maybe True ((ma ==) . north) $ (part !?) =<< goSouth dim coord
-              , maybe True ((ma ==) . west ) $ (part !?) =<< goEast  dim coord
-              ]
-    SW -> and [ maybe True ((ma ==) . south) $ (part !?) =<< goNorth dim coord
-              , maybe True ((si ==) . east ) $ (part !?) =<< goWest  dim coord
-              , maybe True ((si ==) . north) $ (part !?) =<< goSouth dim coord
-              , maybe True ((ma ==) . west ) $ (part !?) =<< goEast  dim coord
-              ]
-    NE -> and [ maybe True ((si ==) . south) $ (part !?) =<< goNorth dim coord
-              , maybe True ((ma ==) . east ) $ (part !?) =<< goWest  dim coord
-              , maybe True ((ma ==) . north) $ (part !?) =<< goSouth dim coord
-              , maybe True ((si ==) . west ) $ (part !?) =<< goEast  dim coord
-              ]
-    SE -> and [ maybe True ((ma ==) . south) $ (part !?) =<< goNorth dim coord
-              , maybe True ((ma ==) . east ) $ (part !?) =<< goWest  dim coord
-              , maybe True ((si ==) . north) $ (part !?) =<< goSouth dim coord
-              , maybe True ((si ==) . west ) $ (part !?) =<< goEast  dim coord
-              ]
-    OO -> and [ ma == si
-              , maybe True ((ma ==) . south) $ (part !?) =<< goNorth dim coord
-              , maybe True ((ma ==) . east ) $ (part !?) =<< goWest  dim coord
-              , maybe True ((ma ==) . north) $ (part !?) =<< goSouth dim coord
-              , maybe True ((ma ==) . west ) $ (part !?) =<< goEast  dim coord
-              ]
+  and $ zipWithP (\ a -> maybe True (a ==)) p mp
+  where
+    p  = colorPartitioning c line
+    mp = P n w s e
+    n = fmap south . (part !?) =<< goNorth dim coord
+    w = fmap east  . (part !?) =<< goWest  dim coord
+    s = fmap north . (part !?) =<< goSouth dim coord
+    e = fmap west  . (part !?) =<< goEast  dim coord
 
 validColorMap :: Dim -> ColorMap -> Solution -> Bool
 validColorMap dim col sol =
