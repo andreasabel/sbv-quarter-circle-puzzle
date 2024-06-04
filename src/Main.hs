@@ -36,10 +36,10 @@ instance Show Val where
       showUnless1 n = show n
 
 instance Num Val where
-  fromInteger i = Val (scale * i) 0
-  negate (Val x y) = Val (negate x) (negate y)
+  fromInteger i         = Val (scale * i) 0
+  negate (Val x y)      = Val (negate x) (negate y)
   Val x1 y1 + Val x2 y2 = Val (x1 + x2) (y1 + y2)
-  Val n 0 * Val x y = Val  (n * x `div` scale) (n * y `div` scale)
+  Val n 0 * Val x y     = Val  (n * x `div` scale) (n * y `div` scale)
   abs = undefined
   signum = undefined
 
@@ -76,15 +76,42 @@ solution1 = concat
   , [ SW, SE, SW, SE ]
   ]
 
+-- * Coloring
+------------------------------------------------------------------------
+
 -- | Cluster IDs.
 type ID = Integer
+
+data Coloring = C
+  { _main :: ID  -- ^ Color of the larger area of this (possibly divided square).
+  , _side :: ID  -- ^ Color of the smaller area.  (Same as 'main' if not divided).
+  }
+  deriving (Show)
+
+type ColorMap = [Coloring]
+
+validColoring :: Coloring -> Line -> Bool
+validColoring (C ma si) = \case
+  OO -> ma == si
+  _  -> ma /= si
+
+coloring1 :: ColorMap
+coloring1 = concat
+  [ [ C 0 1, C 1 0, C 0 2, C 2 2 ]
+  , [ C 0 3, C 4 0, C 4 0, C 2 0 ]
+  , [ C 3 6, C 4 6, C 4 0, C 0 0 ]
+  , [ C 6 5, C 6 7, C 0 7, C 0 8 ]
+  ]
+
+-- ** Partitioning (old-style coloring)
+------------------------------------------------------------------------
 
 type Partition = [Partitioning]
 
 -- | Divide each square via the diagonals into 4 areas, each of which
 -- gets an ID of its cluser.
 data Partitioning = P { north, west, south, east :: ID }
-  deriving (Show)
+  deriving (Show, Eq)
 
 partition1 :: Partition
 partition1 = concat
@@ -93,6 +120,23 @@ partition1 = concat
   , [ P 3 3 6 6, P 4 6 6 4, P 4 4 0 0, P 0 0 0 0 ]
   , [ P 6 5 5 6, P 6 6 7 7, P 0 7 7 0, P 0 0 8 8 ]
   ]
+
+colorPartitioning  :: Coloring -> Line -> Partitioning
+colorPartitioning (C m s) = \case
+  NW -> P s s m m
+  SW -> P m s s m
+  SE -> P m m s s
+  NE -> P s m m s
+  OO -> P m m m m
+
+colorPartition :: ColorMap -> Solution -> Partition
+colorPartition = zipWith colorPartitioning
+
+colorPartition1 = colorPartition coloring1 solution1
+cp1 = colorPartition1 == partition1
+
+-- * Coordinates
+------------------------------------------------------------------------
 
 type Height = Int
 type Width  = Int
