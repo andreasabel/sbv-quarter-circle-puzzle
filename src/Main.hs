@@ -90,8 +90,8 @@ data Coloring = C
 
 type ColorMap = [Coloring]
 
-validColoring :: Coloring -> Line -> Bool
-validColoring (C ma si) = \case
+invariantColoring :: Coloring -> Line -> Bool
+invariantColoring (C ma si) = \case
   OO -> ma == si
   _  -> ma /= si
 
@@ -171,6 +171,48 @@ goEast (Dim _ w)      x = filterMaybe ((0 /=) . (`mod` w)) $ x + 1      -- preve
 
 coordinates :: Dim -> [Coord]
 coordinates dim = [0 .. size dim - 1]
+
+-- * Checking coloring/partitioning
+------------------------------------------------------------------------
+
+-- | Check that the neighbors have the correct color.
+validColoring :: Dim -> Partition -> Coord -> Coloring -> Line -> Bool
+validColoring dim part coord c@(C ma si) line =
+  case line of
+    NW -> and [ maybe True ((si ==) . south) $ (part !?) =<< goNorth dim coord
+              , maybe True ((si ==) . east ) $ (part !?) =<< goWest  dim coord
+              , maybe True ((ma ==) . north) $ (part !?) =<< goSouth dim coord
+              , maybe True ((ma ==) . west ) $ (part !?) =<< goEast  dim coord
+              ]
+    SW -> and [ maybe True ((ma ==) . south) $ (part !?) =<< goNorth dim coord
+              , maybe True ((si ==) . east ) $ (part !?) =<< goWest  dim coord
+              , maybe True ((si ==) . north) $ (part !?) =<< goSouth dim coord
+              , maybe True ((ma ==) . west ) $ (part !?) =<< goEast  dim coord
+              ]
+    NE -> and [ maybe True ((si ==) . south) $ (part !?) =<< goNorth dim coord
+              , maybe True ((ma ==) . east ) $ (part !?) =<< goWest  dim coord
+              , maybe True ((ma ==) . north) $ (part !?) =<< goSouth dim coord
+              , maybe True ((si ==) . west ) $ (part !?) =<< goEast  dim coord
+              ]
+    SE -> and [ maybe True ((ma ==) . south) $ (part !?) =<< goNorth dim coord
+              , maybe True ((ma ==) . east ) $ (part !?) =<< goWest  dim coord
+              , maybe True ((si ==) . north) $ (part !?) =<< goSouth dim coord
+              , maybe True ((si ==) . west ) $ (part !?) =<< goEast  dim coord
+              ]
+    OO -> and [ ma == si
+              , maybe True ((ma ==) . south) $ (part !?) =<< goNorth dim coord
+              , maybe True ((ma ==) . east ) $ (part !?) =<< goWest  dim coord
+              , maybe True ((ma ==) . north) $ (part !?) =<< goSouth dim coord
+              , maybe True ((ma ==) . west ) $ (part !?) =<< goEast  dim coord
+              ]
+
+validColorMap :: Dim -> ColorMap -> Solution -> Bool
+validColorMap dim col sol =
+  and $ zipWith3 (validColoring dim part) (coordinates dim) col sol
+  where
+    part = colorPartition col sol
+
+vcm1 = validColorMap dim1 coloring1 solution1
 
 validSquare :: Dim -> Partition -> Coord -> Partitioning -> Line -> Bool
 validSquare dim part coord (P n w s e) = \case
