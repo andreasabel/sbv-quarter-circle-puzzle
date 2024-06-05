@@ -42,7 +42,7 @@ instance Num Val where
   fromInteger i         = Val (scale * i) 0
   negate (Val x y)      = Val (negate x) (negate y)
   Val x1 y1 + Val x2 y2 = Val (x1 + x2) (y1 + y2)
-  Val n 0 * Val x y     = Val  (n * x `div` scale) (n * y `div` scale)
+  Val n 0 * Val x y     = Val (n * x `div` scale) (n * y `div` scale)
   abs = undefined
   signum = undefined
 
