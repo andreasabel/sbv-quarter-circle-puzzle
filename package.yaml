@@ -9,3 +9,13 @@ dependencies:
 executable:
   source-dirs: src
   main: Main.hs
+
+language: GHC2021
+
+default-extensions:
+- DeriveFoldable
+- DeriveFunctor
+- DeriveTraversable
+- ImportQualifiedPost
+- LambdaCase
+- UnicodeSyntax
