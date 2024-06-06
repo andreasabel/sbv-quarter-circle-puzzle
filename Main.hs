@@ -115,6 +115,9 @@ validSquare b (Square i _ _ _) v0 = v .== 0 .|| v .== boardVal i b
 -- | The board area assigned to a color.
 --
 boardVal :: Color -> Board -> SBV Val
+-- These remove the internal error:
+-- boardVal i = const 0
+-- boardVal i = head . concat . map (map (squareVal i))
 boardVal i = sum . concat . map (map (squareVal i))
 
 -- | The area a square assigns to the given color.
@@ -125,7 +128,10 @@ boardVal i = sum . concat . map (map (squareVal i))
 squareVal :: Color -> Square -> SBV Val
 squareVal i (Square l s _ _) =
   ite (l .== i)
-    (ite (s .== i) 1 (literal (0, 1)))
-    (ite (s .== i) (literal (4, -1)) 0)
+    (ite (s .== i) 1 large)
+    (ite (s .== i) small 0)
+  where
+    large = literal (0, 1)
+    small = literal (4, -1)
 
-main = sat (solvable [[1]])
+main = satWith z3{ verbose = True } (solvable [[1]])
