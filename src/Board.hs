@@ -25,7 +25,7 @@
 module Board where
 
 import Control.Monad
-import Data.List (transpose)
+import Data.List (tails, transpose)
 import Data.SBV
 
 -- | Info board, containing the solution and other information.
@@ -84,10 +84,26 @@ validColoring b =
   sAll (allAdjacent matchHorizontally) b
   .&&
   sAll (allAdjacent matchVertically) (transpose b)
+  .&&
+  allPairs notCompetingCapitals (concat b)
 
 -- | Test all adjacent squares in a row.
 allAdjacent :: (a -> a -> SBool) -> [a] -> SBool
-allAdjacent f as = sAnd $ zipWith f as (drop 1 as)
+allAdjacent rel as = allZip rel as (drop 1 as)
+
+-- | Lift binary relation conjunctively to lists.
+allZip :: (a -> a -> SBool) -> [a] -> [a] -> SBool
+allZip rel xs ys = sAnd $ zipWith rel xs ys
+
+-- | Test all distinct pairs (choose 2).
+-- The relation should be symmetric.
+allPairs :: (a -> a -> SBool) -> [a] -> SBool
+allPairs rel = allAdjacent (allZip rel) . tails
+
+-- | A country cannot have two capitals.
+--
+notCompetingCapitals :: Square -> Square -> SBool
+notCompetingCapitals x y = sNot $ capital x .&& capital y .&& large x .== large y
 
 -- | Color of the Northern edge.
 northColor :: Square -> Color
