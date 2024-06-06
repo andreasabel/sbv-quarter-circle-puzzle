@@ -6,24 +6,21 @@ type Puzzle = [[Val]]
 
 type Val = (Integer, Integer)
 
--- Value scaling
-scale = 4
-
 instance Num Val where
-  fromInteger i       = (scale * i, 0)
+  fromInteger i       = (4 * i, 0)
   negate (x, y)       = (negate x, negate y)
   (x1, y1) + (x2, y2) = (x1 + x2, y1 + y2)
-  (n, 0) * (x, y)     = (n * x `div` scale, n * y `div` scale)
+  (n, 0) * (x, y)     = (n * x `div` 4, n * y `div` 4)
   abs = undefined
   signum = undefined
 
 -- | Quarter circle.
 π¼ :: Val
-π¼ = (0, scale `div` 4)
+π¼ = (0, 1)
 
 -- | Unit square minus quarter circle.
 π¼ᵒᵖ :: Val
-π¼ᵒᵖ = (scale, -scale `div` 4)
+π¼ᵒᵖ = (4, -1)
 
 -- | Solution
 type Board = [[Square]]
@@ -105,8 +102,6 @@ matchHorizontally ::
   -> Square  -- ^ Right square.
   -> SBool
 matchHorizontally l r = eastColor l .== westColor r
-
-type SVal = SBV Val
 
 solvable :: Puzzle -> Symbolic SBool
 solvable p = validSolution p <$> mkBoard p
