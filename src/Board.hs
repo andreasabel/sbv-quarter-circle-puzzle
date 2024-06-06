@@ -34,6 +34,7 @@ type Board = [[Square]]
 
 -- | Coloring maps.  All areas of the same color belong to the same country.
 --
+-- Negative colors indicate neutral territory.
 type Color = SInteger
 
 -- | A square can have one or two colors.
@@ -42,12 +43,27 @@ type Color = SInteger
 -- which can have 4 different orientations, defined by two bits.
 --
 data Square = Square
-  { large   :: Color  -- ^ Coloring of the larger part.
-  , small   :: Color  -- ^ Coloring of the smaller part.
-  , north   :: SBool  -- ^ If 'True', smaller part is to the north otherwise to the south.
-  , west    :: SBool  -- ^ If 'True', smaller part is to the west, else to the east.
-  , capital :: SBool -- ^ If 'True', this square is the capital of a country.
+  { large    :: Color     -- ^ Coloring of the larger part.
+  , small    :: Color     -- ^ Coloring of the smaller part.
+  , north    :: SBool     -- ^ If 'True', smaller part is to the north otherwise to the south.
+  , west     :: SBool     -- ^ If 'True', smaller part is to the west, else to the east.
+  , lPath    :: Path      -- ^ A path from the larger part to its capital.
+  , sPath    :: Path      -- ^ A path from the smaller part to its capital.
   }
+
+-- | A pointer to the next square on the way to the capital.
+--
+data Path = Path
+  { distance :: SInteger  -- ^ How far to the capital?  If zero, then we are at the capital.
+                          --   If negative, we are not connected to a capital (neutral territory).
+  , forward  :: SBool     -- ^ Is forward (S/E) the direction to the capital?
+  , vertical :: SBool     -- ^ Is moving vertically the direction to the capital (or horizontally)?
+  }
+
+-- | Is this square the capital of a country?
+--
+capital :: Square -> SBool
+capital = (0 .==) . distance . lPath
 
 -- * Creating a symbolic board
 ------------------------------------------------------------------------
@@ -70,9 +86,17 @@ mkSquare row col = Square
     <*> symbolic (name "Small")
     <*> symbolic (name "North")
     <*> symbolic (name "West" )
-    <*> symbolic (name "Captial")
+    <*> mkPath   (name "LPath")
+    <*> mkPath   (name "SPath")
   where
     name s = concat [ s, "[", show row, ",", show col, "]" ]
+
+-- | Given a name prefix, create an empty symbolic 'Path'.
+mkPath :: String -> Symbolic Path
+mkPath prefix = Path
+    <$> symbolic (prefix ++ ".Distance")
+    <*> symbolic (prefix ++ ".Forward")
+    <*> symbolic (prefix ++ ".Vertical")
 
 -- * Constraining the board: adjacent squares need to fit
 ------------------------------------------------------------------------
@@ -107,19 +131,19 @@ notCompetingCapitals x y = sNot $ capital x .&& capital y .&& large x .== large 
 
 -- | Color of the Northern edge.
 northColor :: Square -> Color
-northColor (Square l s n _ _) = ite n s l
+northColor (Square l s n _ _ _) = ite n s l
 
 -- | Color of the Southern edge.
 southColor :: Square -> Color
-southColor (Square l s n _ _) = ite n l s
+southColor (Square l s n _ _ _) = ite n l s
 
 -- | Color of the Western edge.
 westColor :: Square -> Color
-westColor (Square l s _ w _) = ite w s l
+westColor (Square l s _ w _ _) = ite w s l
 
 -- | Color of the Eastern edge.
 eastColor :: Square -> Color
-eastColor (Square l s _ w _) = ite w l s
+eastColor (Square l s _ w _ _) = ite w l s
 
 -- | When do two vertically adjacent squares match?
 --

@@ -31,7 +31,7 @@ getSolution :: Board -> Query Solution
 getSolution = mapM (mapM getSquare)
 
 getSquare :: Square -> Query Line
-getSquare (Square l s n w _) = do
+getSquare (Square l s n w _ _) = do
   cl <- getValue l
   cs <- getValue s
   bn <- getValue n
