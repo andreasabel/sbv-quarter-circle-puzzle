@@ -12,4 +12,3 @@ language: GHC2021
 
 default-extensions:
 - LambdaCase
-- UnicodeSyntax

@@ -14,14 +14,6 @@ instance Num Val where
   abs = undefined
   signum = undefined
 
--- | Quarter circle.
-π¼ :: Val
-π¼ = (0, 1)
-
--- | Unit square minus quarter circle.
-π¼ᵒᵖ :: Val
-π¼ᵒᵖ = (4, -1)
-
 -- | Solution
 type Board = [[Square]]
 
@@ -133,7 +125,7 @@ boardVal i = sum . concat . map (map (squareVal i))
 squareVal :: Color -> Square -> SBV Val
 squareVal i (Square l s _ _) =
   ite (l .== i)
-    (ite (s .== i) 1 (literal π¼))
-    (ite (s .== i) (literal π¼ᵒᵖ) 0)
+    (ite (s .== i) 1 (literal (0, 1)))
+    (ite (s .== i) (literal (4, -1)) 0)
 
 main = sat (solvable [[1]])
