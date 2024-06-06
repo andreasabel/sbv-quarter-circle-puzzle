@@ -15,10 +15,16 @@ import Data.List.Extra ((!?))
 import Data.Map (Map)
 import Data.Map qualified as Map
 
-import Values
+import Values hiding (Puzzle, puzzle1)
+import Values qualified
 
 main :: IO ()
 main = putStrLn "Hello puzzle two!"
+
+type Puzzle = [Val]
+
+puzzle1 :: Puzzle
+puzzle1 = concat $ Values.puzzle1
 
 -- * Solution
 ------------------------------------------------------------------------

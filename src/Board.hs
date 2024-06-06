@@ -1,5 +1,6 @@
 module Board where
 
+import Control.Monad
 import Data.List (transpose)
 import Data.SBV
 
@@ -21,6 +22,27 @@ data Square = Square
   , north :: SBool  -- ^ If 'True', smaller part is to the north otherwise to the south.
   , west  :: SBool  -- ^ If 'True', smaller part is to the west, else to the east.
   }
+
+-- | Create an empty board of the given shape.
+--
+mkBoard :: [[a]] -> Symbolic Board
+mkBoard = zipWithM mkRow [0..]
+
+-- | Create an empty row of the given shape.
+--
+mkRow :: Int -> [a] -> Symbolic [Square]
+mkRow row colShape = zipWithM (\ col _ -> mkSquare row col ) [0..] colShape
+
+-- | Create an empty square at the given coordinates.
+--
+mkSquare :: Int -> Int -> Symbolic Square
+mkSquare row col = Square
+    <$> symbolic (name "Large")
+    <*> symbolic (name "Small")
+    <*> symbolic (name "North")
+    <*> symbolic (name "West" )
+  where
+    name s = concat [ s, "[", show row, ",", show col, "]" ]
 
 -- | Do the colors of the squares fit together?
 --
