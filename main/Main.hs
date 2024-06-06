@@ -6,4 +6,4 @@ import Solution qualified
 
 -- main = satWith z3{ verbose = True } (solvable puzzle0)
 
-main = print =<< Solution.solve puzzle1
+main = print =<< Solution.solve puzzle

@@ -1,5 +1,6 @@
 module Solution where
 
+import Control.Monad.IO.Class
 import Data.SBV
 import Data.SBV.Control
 
@@ -24,7 +25,16 @@ solve p = runSMT do
   b <- mkBoard p
   constrain $ validSolution p b
   query $ checkSat >>= \case
-    Sat -> getSolution b
+    Sat -> do
+      -- print coloring
+      liftIO . print =<< mapM (mapM (getValue . large)) b
+      -- print distances
+      liftIO . print =<< mapM (mapM (getValue . distance . lPath)) b
+      -- print directions
+      liftIO . print =<< mapM (mapM getDirection) b
+      -- print competing capitals?
+      liftIO . print =<< getValue (noCompetingCapitals b)
+      getSolution b
     r -> error $ "Solver said: " ++ show r
 
 getSolution :: Board -> Query Solution
@@ -42,3 +52,17 @@ getSquare (Square l s n w _ _) = do
       (True , False) -> NE
       (False, True ) -> SW
       (False, False) -> SE
+
+getDirection :: Square -> Query Direction
+getDirection (Square _ _ _ _ (Path _ f v) _) = do
+  bf <- getValue f
+  bv <- getValue v
+  return
+    case (bf, bv) of
+      (True , True ) -> S
+      (True , False) -> E
+      (False, True ) -> N
+      (False, False) -> W
+
+data Direction = N | W | S | E
+  deriving Show

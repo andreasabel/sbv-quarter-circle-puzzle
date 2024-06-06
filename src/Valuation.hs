@@ -22,10 +22,10 @@ test = satWith z3{ verbose = True } . solvable
 
 solvable :: Puzzle -> Symbolic SBool
 solvable p = validSolution p <$> mkBoard p
+-- END temporary
 
 validSolution :: Puzzle -> Board -> SBool
 validSolution p b = validColoring b .&& validValuation b p
--- END temporary
 
 -- | Does a well-formed board coloring solve the puzzle?
 --
@@ -40,7 +40,7 @@ validSquare :: Board -> Square -> Val -> SBool
 validSquare b sq = \case
   -- No value, no capital!
   (0, 0) -> sNot $ capital sq
-  v -> litVal v .== boardVal (large sq) b
+  v -> hasCapital (large sq) b .&& litVal v .== boardVal (large sq) b
 
 -- | The board area assigned to a color.
 --
@@ -53,10 +53,19 @@ boardVal i = sumVals . concat . map (map (squareVal i))
 -- or the rest of a unit square if you take away a quarter circle.
 --
 squareVal :: Color -> Square -> SVal
-squareVal i (Square l s _ _ _ _) =
+squareVal i (Square l s _ _ _ _) = ite (i .< 0) (litVal 0) $  -- don't count neutral territory
   ite (l .== i)
     (ite (s .== i) (litVal 1) (litVal π¼))
     (ite (s .== i) (litVal π¼ᵒᵖ) (litVal 0))
+-- squareVal i sq = largeVal i sq `plusVal` smallVal i sq
+
+-- largeVal :: Color -> Square -> SVal
+-- largeVal i (Square l _ _ _ lPath _) =
+--   ite (l .== i .&& distance lPath .>= 0) (litVal π¼) (litVal 0)
+
+-- smallVal :: Color -> Square -> SVal
+-- smallVal i (Square _ s _ _ _ sPath) =
+--   ite (s .== i .&& distance sPath .> 0) (litVal π¼ᵒᵖ) (litVal 0)
 
 -- * Auxiliary definitions
 
@@ -69,5 +78,8 @@ litVal (x, y) = (literal x, literal y)
 -- but we have to work around <https://github.com/LeventErkok/sbv/issues/698>.
 sumVals :: [SVal] -> SVal
 sumVals vs = (sum (map fst vs), sum (map snd vs))
+
+plusVal :: SVal -> SVal -> SVal
+plusVal (x, y) (x', y') = (x + x', y + y')
 
 -- toVal :: (SInteger, SInteger) -> SBV Val --?
