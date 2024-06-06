@@ -1,5 +1,26 @@
 -- | The board contains the solution in a form benefitial for SMT
 -- plus auxiliary data we need to verify the correctness of the solution.
+--
+-- A square contains information how the square is divided into two parts
+-- and what the colors of the 'large' and 'small' parts are.
+-- If the parts have the same color, the square is actually not divided.
+-- Otherwise, the bits 'north' and 'west' indicate which of the four
+-- sectors N, W, S, E of the square the quarter-circle shaped line
+-- passes through.
+--
+-- The information in the squares partitions the board into areas.
+-- The areas should form connected countries.
+-- So, each country should have a captial square,
+-- and each other square should have a finite path to this capital.
+-- We represent these paths locally in a square
+-- by a distance to the capital (to rule out infinite paths),
+-- and a direction where the capital lies.
+-- Going in this direction brings us a step closer to the capital.
+--
+-- Let us assume the tourist seeking the capital looks SE,
+-- then he can step to an adjacent square by being told
+-- whether to move horizontally or vertically,
+-- and whether to go forward or backward.
 
 module Board where
 
@@ -21,10 +42,11 @@ type Color = SInteger
 -- which can have 4 different orientations, defined by two bits.
 --
 data Square = Square
-  { large :: Color  -- ^ Coloring of the larger part.
-  , small :: Color  -- ^ Coloring of the smaller part.
-  , north :: SBool  -- ^ If 'True', smaller part is to the north otherwise to the south.
-  , west  :: SBool  -- ^ If 'True', smaller part is to the west, else to the east.
+  { large   :: Color  -- ^ Coloring of the larger part.
+  , small   :: Color  -- ^ Coloring of the smaller part.
+  , north   :: SBool  -- ^ If 'True', smaller part is to the north otherwise to the south.
+  , west    :: SBool  -- ^ If 'True', smaller part is to the west, else to the east.
+  , capital :: SBool -- ^ If 'True', this square is the capital of a country.
   }
 
 -- * Creating a symbolic board
@@ -48,6 +70,7 @@ mkSquare row col = Square
     <*> symbolic (name "Small")
     <*> symbolic (name "North")
     <*> symbolic (name "West" )
+    <*> symbolic (name "Captial")
   where
     name s = concat [ s, "[", show row, ",", show col, "]" ]
 
@@ -68,19 +91,19 @@ allAdjacent f as = sAnd $ zipWith f as (drop 1 as)
 
 -- | Color of the Northern edge.
 northColor :: Square -> Color
-northColor (Square l s n _) = ite n s l
+northColor (Square l s n _ _) = ite n s l
 
 -- | Color of the Southern edge.
 southColor :: Square -> Color
-southColor (Square l s n _) = ite n l s
+southColor (Square l s n _ _) = ite n l s
 
 -- | Color of the Western edge.
 westColor :: Square -> Color
-westColor (Square l s _ w) = ite w s l
+westColor (Square l s _ w _) = ite w s l
 
 -- | Color of the Eastern edge.
 eastColor :: Square -> Color
-eastColor (Square l s _ w) = ite w l s
+eastColor (Square l s _ w _) = ite w l s
 
 -- | When do two vertically adjacent squares match?
 --

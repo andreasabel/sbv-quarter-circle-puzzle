@@ -35,9 +35,10 @@ validValuation b p = sAnd $ concat $ zipWith (zipWith (validSquare b)) b p
 -- | When a square of color @i@ is labeled with value @v@ in the puzzle,
 --   the board area of this color should match the value.
 --
+--   Only capitals can be labeled with a value.
 validSquare :: Board -> Square -> Val -> SBool
-validSquare b (Square i _ _ _) = \case
-  (0, 0) -> sTrue
+validSquare b (Square i _ _ _ c) = \case
+  (0, 0) -> sNot c
   v -> litVal v  .== boardVal i b
 
 -- | The board area assigned to a color.
@@ -51,7 +52,7 @@ boardVal i = sumVals . concat . map (map (squareVal i))
 -- or the rest of a unit square if you take away a quarter circle.
 --
 squareVal :: Color -> Square -> SVal
-squareVal i (Square l s _ _) =
+squareVal i (Square l s _ _ _) =
   ite (l .== i)
     (ite (s .== i) (litVal 1) (litVal π¼))
     (ite (s .== i) (litVal π¼ᵒᵖ) (litVal 0))
