@@ -6,9 +6,14 @@ dependencies:
 - extra
 - sbv
 
-executable:
+library:
   source-dirs: src
+
+executable:
+  source-dirs: main
   main: Main.hs
+  dependencies:
+  - puzzle-two
 
 language: GHC2021
 

@@ -4,10 +4,16 @@ module Valuation where
 
 import Data.SBV
 
-import Values
+import Val
 import Board
 
 type SVal = SBV Val
+
+puzzle :: Puzzle
+puzzle =
+  [ [4, 4]
+  , [4, 4]
+  ]
 
 solvable :: Puzzle -> Symbolic SBool
 solvable p = validSolution p <$> mkBoard p
