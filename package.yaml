@@ -5,7 +5,7 @@ dependencies:
 - sbv
 
 executable:
-  source-dirs: main
+  source-dirs: .
   main: Main.hs
 
 language: GHC2021
