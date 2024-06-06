@@ -9,6 +9,3 @@ executable:
   main: MWE.hs
 
 language: GHC2021
-
-default-extensions:
-- LambdaCase
