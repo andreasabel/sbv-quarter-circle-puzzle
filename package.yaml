@@ -6,7 +6,7 @@ dependencies:
 
 executable:
   source-dirs: .
-  main: Main.hs
+  main: MWE.hs
 
 language: GHC2021
 
