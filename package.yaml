@@ -21,6 +21,7 @@ default-extensions:
 - DeriveFoldable
 - DeriveFunctor
 - DeriveTraversable
+- BlockArguments
 - ImportQualifiedPost
 - LambdaCase
 - UnicodeSyntax

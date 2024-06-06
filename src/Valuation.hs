@@ -7,13 +7,16 @@ import Data.SBV
 import Val
 import Board
 
-type SVal = SBV Val
+-- type SVal = SBV Val -- hits issue #698
+type SVal = (SInteger, SInteger) -- workaround
 
 puzzle :: Puzzle
 puzzle =
   [ [4, 4]
   , [4, 4]
   ]
+
+test = satWith z3{ verbose = True } . solvable
 
 solvable :: Puzzle -> Symbolic SBool
 solvable p = validSolution p <$> mkBoard p
@@ -29,21 +32,34 @@ validValuation :: Board -> Puzzle -> SBool
 validValuation b p = sAnd $ concat $ zipWith (zipWith (validSquare b)) b p
 
 validSquare :: Board -> Square -> Val -> SBool
-validSquare b (Square i _ _ _) v0 = v .== 0 .|| v .== boardVal i b
-  where v = literal v0
+validSquare b (Square i _ _ _) = \case
+  (0, 0) -> sTrue
+  v -> litVal v  .== boardVal i b
 
 -- | The board area assigned to a color.
 --
-boardVal :: Color -> Board -> SBV Val
-boardVal i = sum . concat . map (map (squareVal i))
+boardVal :: Color -> Board -> SVal
+boardVal i = sumVals . concat . map (map (squareVal i))
 
 -- | The area a square assigns to the given color.
 --
 -- Can be nothing, a unit square, a quarter circle,
 -- or the rest of a unit square if you take away a quarter circle.
 --
-squareVal :: Color -> Square -> SBV Val
+squareVal :: Color -> Square -> SVal
 squareVal i (Square l s _ _) =
   ite (l .== i)
-    (ite (s .== i) 1 (literal π¼))
-    (ite (s .== i) (literal π¼ᵒᵖ) 0)
+    (ite (s .== i) (litVal 1) (litVal π¼))
+    (ite (s .== i) (litVal π¼ᵒᵖ) (litVal 0))
+
+litVal :: Val -> SVal
+litVal (x, y) = (literal x, literal y)
+
+
+
+-- | This should be just 'sum',
+-- but we have to work around <https://github.com/LeventErkok/sbv/issues/698>.
+sumVals :: [SVal] -> SVal
+sumVals vs = (sum (map fst vs), sum (map snd vs))
+
+-- toVal :: (SInteger, SInteger) -> SBV Val --?

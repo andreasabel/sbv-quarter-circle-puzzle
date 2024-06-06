@@ -77,6 +77,7 @@ matchVertically ::
   -> Square  -- ^ Botton square.
   -> SBool
 matchVertically t b = southColor t .== northColor b
+  .&&  ((north t .== north b) .<+> (west t .== west b))
 
 -- | When do two horizontally adjacent squares match?
 matchHorizontally ::
@@ -84,3 +85,4 @@ matchHorizontally ::
   -> Square  -- ^ Right square.
   -> SBool
 matchHorizontally l r = eastColor l .== westColor r
+  .&&  ((north l .== north r) .<+> (west l .== west r))
