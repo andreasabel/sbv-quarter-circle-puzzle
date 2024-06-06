@@ -209,19 +209,23 @@ noRight sq = noMoving sTrue sFalse (lPath sq) .&& noMoving sTrue sFalse (sPath s
 
 -- | Cannot move in the given direction.
 noMoving :: SBool -> SBool -> Path -> SBool
-noMoving fwd vert (Path _ f v) = fwd ./= f .|| vert ./= v
+noMoving fwd vert (Path d f v) = d .<= 0 .|| fwd ./= f .|| vert ./= v
 
 -- | Crossing a border between two adjacent squares.
 crossing :: SBool -> Path -> Path -> SBool
 crossing vert (Path ld lf lv) (Path rd rf rv) =
-  ld .>= 0 .&& rd .>= 0 .=> sAnd
-    [ lf      .&& lv .== vert .=> ld .== rd + 1  -- going forward (right/down)
-    , sNot rf .&& rv .== vert .=> rd .== ld + 1  -- going backward (left/up)
-    , sOr
-      [ lf      .&& lv .== vert .&& ld .== rd + 1  -- going forward (right/down)
-      , sNot rf .&& rv .== vert .&& rd .== ld + 1  -- going backward (left/up)
-      ]
+  sAnd
+    [ rd .>= 0 .&& lf      .&& lv .== vert .=> ld .== rd + 1  -- going forward (right/down)
+    , ld .>= 0 .&& sNot rf .&& rv .== vert .=> rd .== ld + 1  -- going backward (left/up)
     ]
+  -- ld .>= 0 .&& rd .>= 0 .=> sAnd
+  --   [ lf      .&& lv .== vert .=> ld .== rd + 1  -- going forward (right/down)
+  --   , sNot rf .&& rv .== vert .=> rd .== ld + 1  -- going backward (left/up)
+  --   , sOr
+  --     [ lf      .&& lv .== vert .&& ld .== rd + 1  -- going forward (right/down)
+  --     , sNot rf .&& rv .== vert .&& rd .== ld + 1  -- going backward (left/up)
+  --     ]
+  --   ]
 -- crossing vert (Path ld lf lv) (Path rd rf rv) = sOr
 --   [ ld .< 0                                    -- not a path
 --   , rd .< 0                                    -- not a path
