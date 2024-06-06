@@ -1,6 +1,6 @@
 module Board where
 
-import Control.Monad
+import Control.Monad (zipWithM)
 import Data.List (transpose)
 import Data.SBV
 

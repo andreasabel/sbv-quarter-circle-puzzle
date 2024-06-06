@@ -2,8 +2,6 @@ name: puzzle-two
 
 dependencies:
 - base
-- containers
-- extra
 - sbv
 
 library:
@@ -18,9 +16,5 @@ executable:
 language: GHC2021
 
 default-extensions:
-- DeriveFoldable
-- DeriveFunctor
-- DeriveTraversable
-- ImportQualifiedPost
 - LambdaCase
 - UnicodeSyntax
