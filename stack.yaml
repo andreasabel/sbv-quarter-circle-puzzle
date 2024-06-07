@@ -1,1 +1,4 @@
 resolver: nightly-2024-06-04
+
+extra-deps:
+- iso-deriving-0.0.8

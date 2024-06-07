@@ -4,6 +4,7 @@ dependencies:
 - base
 - containers
 - extra
+- iso-deriving
 - sbv
 
 library:
@@ -21,6 +22,7 @@ default-extensions:
 - DeriveFoldable
 - DeriveFunctor
 - DeriveTraversable
+- DerivingVia
 - BlockArguments
 - ImportQualifiedPost
 - LambdaCase
