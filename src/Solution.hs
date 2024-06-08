@@ -56,7 +56,7 @@ getSquare (Square l s n w _ _) = do
       (False, False) -> SE
 
 getDirection :: Square -> Query Direction
-getDirection (Square _ _ _ _ (Path _ f v) _) = do
+getDirection (Square _ _ _ _ (Path _ (Direction f v)) _) = do
   bf <- getValue f
   bv <- getValue v
   return

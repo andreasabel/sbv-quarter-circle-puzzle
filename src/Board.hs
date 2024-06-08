@@ -54,17 +54,41 @@ data Square = Square
   , sPath    :: Path      -- ^ A path from the smaller part to its capital.
   }
 
--- | A pointer to the next square on the way to the capital.
+-- | The first step of the path from the current square to the capital.
 --
 -- Irrelevant if we are neutral territory.
 data Path = Path
-  { distance :: SInteger  -- ^ How far to the capital?  If zero, then we are at the capital.
-                          --   If negative, we are not connected to a capital (neutral territory).
-  , forward  :: SBool     -- ^ Is forward (S/E) the direction to the capital?
-  , vertical :: SBool     -- ^ Is moving vertically the direction to the capital (or horizontally)?
+  { distance  :: SInteger   -- ^ How far to the capital?  If zero, then we are at the capital.
+                            --   If negative, we are not connected to a capital (neutral territory).
+  , direction :: SDirection  -- ^ Direction (N,W,S,E) for the next step.
   }
   deriving (Generic, Mergeable)
   -- deriving Mergeable via ((SInteger, SBool, SBool) `As` Path)
+
+-- | A pointer to the next square on the way to the capital.
+--
+-- The traveller to the capital looks SE.
+data SDirection = Direction
+  { forward  :: SBool     -- ^ Is forward (S/E) the direction to the capital?
+  , vertical :: SBool     -- ^ Is moving vertically the direction to the capital (or horizontally)?
+  }
+  deriving (Generic, EqSymbolic, Mergeable)
+
+-- | Direction north.
+dN :: SDirection
+dN = Direction sFalse sTrue
+
+-- | Direction south.
+dS :: SDirection
+dS = Direction sTrue sTrue
+
+-- | Direction west.
+dW :: SDirection
+dW = Direction sFalse sFalse
+
+-- | Direction east.
+dE :: SDirection
+dE = Direction sTrue sFalse
 
 -- | Is this square the capital of a country?
 --
@@ -106,7 +130,12 @@ mkSquare row col = Square
 mkPath :: String -> Symbolic Path
 mkPath prefix = Path
     <$> symbolic (prefix ++ ".Distance")
-    <*> symbolic (prefix ++ ".Forward")
+    <*> mkDirection prefix
+
+-- | Given a name prefix, create an empty symbolic 'Direction'.
+mkDirection :: String -> Symbolic SDirection
+mkDirection prefix = Direction
+    <$> symbolic (prefix ++ ".Forward")
     <*> symbolic (prefix ++ ".Vertical")
 
 -- * Constraining the board: adjacent squares need to fit
@@ -175,8 +204,8 @@ matchVertically t b = sAnd
   [ linesConnect t b
   , southColor t .== northColor b
   , crossing sTrue (southPath t) (northPath b)
-  , split t .=> noMoving sTrue  sTrue (northPath t)
-  , split b .=> noMoving sFalse sTrue (southPath b)
+  , split t .=> noMoving dS (northPath t)
+  , split b .=> noMoving dN (southPath b)
   ]
 -- | When do two horizontally adjacent squares match?
 matchHorizontally ::
@@ -187,8 +216,8 @@ matchHorizontally l r = sAnd
   [ linesConnect l r
   , eastColor l .== westColor r
   , crossing sFalse (eastPath l) (westPath r)
-  , split l .=> noMoving sTrue  sFalse (westPath l)
-  , split r .=> noMoving sFalse sFalse (eastPath r)
+  , split l .=> noMoving dE (westPath l)
+  , split r .=> noMoving dW (eastPath r)
   ]
 
 -- | Don't leave the board
@@ -201,24 +230,25 @@ stayInside b = sAnd
   ]
 
 noUp :: Square -> SBool
-noUp sq = noMoving sFalse sTrue (lPath sq) .&& noMoving sFalse sTrue (sPath sq)
+noUp sq = noMoving dN (lPath sq) .&& noMoving dN (sPath sq)
 
 noDown :: Square -> SBool
-noDown sq = noMoving sTrue sTrue (lPath sq) .&& noMoving sTrue sTrue (sPath sq)
+noDown sq = noMoving dS (lPath sq) .&& noMoving dS (sPath sq)
 
 noLeft :: Square -> SBool
-noLeft sq = noMoving sFalse sFalse (lPath sq) .&& noMoving sFalse sFalse (sPath sq)
+noLeft sq = noMoving dW (lPath sq) .&& noMoving dW (sPath sq)
 
 noRight :: Square -> SBool
-noRight sq = noMoving sTrue sFalse (lPath sq) .&& noMoving sTrue sFalse (sPath sq)
+noRight sq = noMoving dE (lPath sq) .&& noMoving dE (sPath sq)
 
 -- | Cannot move in the given direction.
-noMoving :: SBool -> SBool -> Path -> SBool
-noMoving fwd vert (Path d f v) = d .<= 0 .|| fwd ./= f .|| vert ./= v
+noMoving :: SDirection -> Path -> SBool
+noMoving d1 (Path dist d2) = dist .<= 0 .|| d1 ./= d2
+-- noMoving (Direction fwd vert) (Path d (Direction f v)) = d .<= 0 .|| fwd ./= f .|| vert ./= v
 
 -- | Crossing a border between two adjacent squares.
 crossing :: SBool -> Path -> Path -> SBool
-crossing vert (Path ld lf lv) (Path rd rf rv) =
+crossing vert (Path ld (Direction lf lv)) (Path rd (Direction rf rv)) =
   sAnd
     [ rd .>= 0 .&& lf      .&& lv .== vert .=> ld .== rd + 1  -- going forward (right/down)
     , ld .>= 0 .&& sNot rf .&& rv .== vert .=> rd .== ld + 1  -- going backward (left/up)
