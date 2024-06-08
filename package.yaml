@@ -4,7 +4,7 @@ dependencies:
 - base
 - containers
 - extra
-- iso-deriving
+# - iso-deriving
 - sbv
 
 library:
@@ -19,11 +19,13 @@ executable:
 language: GHC2021
 
 default-extensions:
-- DeriveFoldable
-- DeriveFunctor
-- DeriveTraversable
-- DerivingVia
 - BlockArguments
 - ImportQualifiedPost
 - LambdaCase
 - UnicodeSyntax
+# For Generic
+- DeriveAnyClass
+# - DeriveFoldable
+# - DeriveFunctor
+# - DeriveTraversable
+# - DerivingVia

@@ -27,7 +27,9 @@ module Board where
 import Control.Monad
 import Data.List     ( tails, transpose )
 import Data.SBV
-import Iso.Deriving  ( As(As), Isomorphic, Inject(inj), Project(prj) )
+import GHC.Generics
+-- Experiment iso-deriving:
+-- import Iso.Deriving  ( As(As), Isomorphic, Inject(inj), Project(prj) )
 
 -- | Info board, containing the solution and other information.
 --
@@ -61,7 +63,8 @@ data Path = Path
   , forward  :: SBool     -- ^ Is forward (S/E) the direction to the capital?
   , vertical :: SBool     -- ^ Is moving vertically the direction to the capital (or horizontally)?
   }
-  deriving Mergeable via ((SInteger, SBool, SBool) `As` Path)
+  deriving (Generic, Mergeable)
+  -- deriving Mergeable via ((SInteger, SBool, SBool) `As` Path)
 
 -- | Is this square the capital of a country?
 --
@@ -277,27 +280,31 @@ eastPath sq@(Square _ _ _ w l s) = ite (split sq) (ite w l s) l
 
 -- * Boilerplate
 
+-- Mergeable hand-implemented:
+
 -- instance Mergeable Path where
 --   symbolicMerge f t p1 p2 = tupToPath $ symbolicMerge f t (pathToTup p1) (pathToTup p2)
 --   select ps p ind         = tupToPath $ select (map pathToTup ps) (pathToTup p) ind
 
-instance (Isomorphic a b, Mergeable a) => Mergeable (As a b) where
-  symbolicMerge f t x1 x2 = As . inj @a $ symbolicMerge f t (prj @a . getAs $ x1) (prj @a . getAs $ x2)
-  select xs x ind         = As . inj @a $ select (map (prj @a . getAs) xs) (prj @a . getAs $ x) ind
+-- Mergeable via iso-deriving:
 
-getAs :: As a b -> b
-getAs (As x) = x
+-- instance (Isomorphic a b, Mergeable a) => Mergeable (As a b) where
+--   symbolicMerge f t x1 x2 = As . inj @a $ symbolicMerge f t (prj @a . getAs $ x1) (prj @a . getAs $ x2)
+--   select xs x ind         = As . inj @a $ select (map (prj @a . getAs) xs) (prj @a . getAs $ x) ind
 
-instance Isomorphic (SInteger, SBool, SBool) Path where
+-- getAs :: As a b -> b
+-- getAs (As x) = x
 
-instance Inject (SInteger, SBool, SBool) Path where
-  inj = tupToPath
+-- instance Isomorphic (SInteger, SBool, SBool) Path where
 
-instance Project (SInteger, SBool, SBool) Path where
-  prj = pathToTup
+-- instance Inject (SInteger, SBool, SBool) Path where
+--   inj = tupToPath
 
-pathToTup :: Path -> (SInteger, SBool, SBool)
-pathToTup (Path x y z) = (x, y, z)
+-- instance Project (SInteger, SBool, SBool) Path where
+--   prj = pathToTup
 
-tupToPath :: (SInteger, SBool, SBool) -> Path
-tupToPath (x, y, z) = Path x y z
+-- pathToTup :: Path -> (SInteger, SBool, SBool)
+-- pathToTup (Path x y z) = (x, y, z)
+
+-- tupToPath :: (SInteger, SBool, SBool) -> Path
+-- tupToPath (x, y, z) = Path x y z
