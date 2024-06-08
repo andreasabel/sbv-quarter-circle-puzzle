@@ -25,7 +25,6 @@
 module Board where
 
 import Control.Monad
-import Data.List     ( transpose )
 import Data.SBV
 import GHC.Generics
 -- Experiment iso-deriving:
@@ -50,11 +49,17 @@ type Color = SInteger
 data Square = Square
   { large    :: Color     -- ^ Coloring of the larger part.
   , small    :: Color     -- ^ Coloring of the smaller part.
-  , north    :: SBool     -- ^ If 'True', smaller part is to the north otherwise to the south.
-  , west     :: SBool     -- ^ If 'True', smaller part is to the west, else to the east.
+  , quadrant :: Quadrant  -- ^ If divided, by which quadrant of the circle?
+                          --   E.g., if by the NW quadrant, then the smaller part is in the NW.
   , lPath    :: Path      -- ^ A path from the larger part to its capital.
   , sPath    :: Path      -- ^ A path from the smaller part to its capital.
   }
+
+data Quadrant = Quadrant
+  { north    :: SBool     -- ^ Northern hemisphere?  (Or southern?)
+  , west     :: SBool     -- ^ Western hemisphere?   (Or eastern?)
+  }
+  deriving (Generic, Mergeable)
 
 -- | The first step of the path from the current square to the capital.
 --
@@ -75,6 +80,22 @@ data SDirection = Direction
   , vertical :: SBool     -- ^ Is moving vertically the direction to the capital (or horizontally)?
   }
   deriving (Generic, EqSymbolic, Mergeable)
+
+-- | Quadrant north-west.
+qNW :: Quadrant
+qNW = Quadrant sTrue sTrue
+
+-- | Quadrant north-east.
+qNE :: Quadrant
+qNE = Quadrant sTrue sFalse
+
+-- | Quadrant south-east.
+qSE :: Quadrant
+qSE = Quadrant sFalse sFalse
+
+-- | Quadrant south-west.
+qSW :: Quadrant
+qSW = Quadrant sFalse sTrue
 
 -- | Direction north.
 dN :: SDirection
@@ -119,14 +140,18 @@ mkRow row colShape = zipWithM (\ col _ -> mkSquare row col ) [0..] colShape
 --
 mkSquare :: Int -> Int -> Symbolic Square
 mkSquare row col = Square
-    <$> symbolic (name "Large")
-    <*> symbolic (name "Small")
-    <*> symbolic (name "North")
-    <*> symbolic (name "West" )
-    <*> mkPath   (name "LPath")
-    <*> mkPath   (name "SPath")
+    <$> symbolic   (name "Large")
+    <*> symbolic   (name "Small")
+    <*> mkQuadrant (name "Quadrant")
+    <*> mkPath     (name "LPath")
+    <*> mkPath     (name "SPath")
   where
     name s = concat [ s, "[", show row, ",", show col, "]" ]
+
+mkQuadrant :: String -> Symbolic Quadrant
+mkQuadrant prefix = Quadrant
+    <$> symbolic (prefix ++ ".North")
+    <*> symbolic (prefix ++ ".West")
 
 -- | Given a name prefix, create an empty symbolic 'Path'.
 mkPath :: String -> Symbolic Path
@@ -264,39 +289,42 @@ crossing vert (Path ld (Direction lf lv)) (Path rd (Direction rf rv)) =
 -- E.g. NW connects to SW and NE, but not to SE or NW.
 --
 linesConnect :: Square -> Square -> SBool
-linesConnect x y = (north x .== north y) .<+> (west x .== west y)
+linesConnect = linesConnect' `on` quadrant
+
+linesConnect' :: Quadrant -> Quadrant -> SBool
+linesConnect' x y = (north x .== north y) .<+> (west x .== west y)
 
 -- | Color of the Northern edge.
 northColor :: Square -> Color
-northColor (Square l s n _ _ _) = ite n s l
+northColor (Square l s (Quadrant n _) _ _) = ite n s l
 
 -- | Color of the Southern edge.
 southColor :: Square -> Color
-southColor (Square l s n _ _ _) = ite n l s
+southColor (Square l s (Quadrant n _) _ _) = ite n l s
 
 -- | Color of the Western edge.
 westColor :: Square -> Color
-westColor (Square l s _ w _ _) = ite w s l
+westColor (Square l s (Quadrant _ w) _ _) = ite w s l
 
 -- | Color of the Eastern edge.
 eastColor :: Square -> Color
-eastColor (Square l s _ w _ _) = ite w l s
+eastColor (Square l s (Quadrant _ w) _ _) = ite w l s
 
 -- | Path of the Northern edge.
 northPath :: Square -> Path
-northPath sq@(Square _ _ n _ l s) = ite (split sq) (ite n s l) l
+northPath sq@(Square _ _ (Quadrant n _) l s) = ite (split sq) (ite n s l) l
 
 -- | Path of the Southern edge.
 southPath :: Square -> Path
-southPath sq@(Square _ _ n _ l s) = ite (split sq) (ite n l s) l
+southPath sq@(Square _ _ (Quadrant n _) l s) = ite (split sq) (ite n l s) l
 
 -- | Path of the Western edge.
 westPath :: Square -> Path
-westPath sq@(Square _ _ _ w l s) = ite (split sq) (ite w s l) l
+westPath sq@(Square _ _ (Quadrant _ w) l s) = ite (split sq) (ite w s l) l
 
 -- | Path of the Eastern edge.
 eastPath :: Square -> Path
-eastPath sq@(Square _ _ _ w l s) = ite (split sq) (ite w l s) l
+eastPath sq@(Square _ _ (Quadrant _ w) l s) = ite (split sq) (ite w l s) l
 
 -- * Boilerplate
 

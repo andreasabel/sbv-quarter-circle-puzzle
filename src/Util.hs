@@ -1,5 +1,7 @@
-module Util where
+module Util (module Util, module X) where
 
+import Data.Function      as X     (on)
+import Data.List          as X     (transpose)
 import Data.List.NonEmpty qualified as List1
 import Data.SBV
 

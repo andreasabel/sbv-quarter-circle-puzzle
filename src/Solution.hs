@@ -43,20 +43,23 @@ getSolution :: Board -> Query Solution
 getSolution = mapM (mapM getSquare)
 
 getSquare :: Square -> Query Line
-getSquare (Square l s n w _ _) = do
+getSquare (Square l s q _ _) = do
   cl <- getValue l
   cs <- getValue s
+  if cl == cs then return OO else getQuadrant q
+
+getQuadrant :: Quadrant -> Query Line
+getQuadrant (Quadrant n w) = do
   bn <- getValue n
   bw <- getValue w
-  return if cl == cs then OO else
-    case (bn, bw) of
-      (True , True ) -> NW
-      (True , False) -> NE
-      (False, True ) -> SW
-      (False, False) -> SE
+  return case (bn, bw) of
+    (True , True ) -> NW
+    (True , False) -> NE
+    (False, True ) -> SW
+    (False, False) -> SE
 
 getDirection :: Square -> Query Direction
-getDirection (Square _ _ _ _ (Path _ (Direction f v)) _) = do
+getDirection (Square _ _ _ (Path _ (Direction f v)) _) = do
   bf <- getValue f
   bv <- getValue v
   return

@@ -53,18 +53,18 @@ boardVal i = sumVals . concat . map (map (squareVal i))
 -- or the rest of a unit square if you take away a quarter circle.
 --
 squareVal :: Color -> Square -> SVal
-squareVal i (Square l s _ _ _ _) = ite (i .< 0) (litVal 0) $  -- don't count neutral territory
+squareVal i (Square l s _ _ _) = ite (i .< 0) (litVal 0) $  -- don't count neutral territory
   ite (l .== i)
     (ite (s .== i) (litVal 1) (litVal π¼))
     (ite (s .== i) (litVal π¼ᵒᵖ) (litVal 0))
 -- squareVal i sq = largeVal i sq `plusVal` smallVal i sq
 
 -- largeVal :: Color -> Square -> SVal
--- largeVal i (Square l _ _ _ lPath _) =
+-- largeVal i (Square l _ _ lPath _) =
 --   ite (l .== i .&& distance lPath .>= 0) (litVal π¼) (litVal 0)
 
 -- smallVal :: Color -> Square -> SVal
--- smallVal i (Square _ s _ _ _ sPath) =
+-- smallVal i (Square _ s _ _ sPath) =
 --   ite (s .== i .&& distance sPath .> 0) (litVal π¼ᵒᵖ) (litVal 0)
 
 -- * Auxiliary definitions
