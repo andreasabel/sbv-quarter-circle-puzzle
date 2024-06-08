@@ -13,10 +13,10 @@ type Solution = [[Line]]
 -- | Possible square fillings.
 data Line
   = OO    -- ^ Empty.
-  | NW    -- ^ Quarter circle from north to west.
-  | SW    -- ^ Quarter circle from south to west.
-  | NE    -- ^ Quarter circle from north to east.
-  | SE    -- ^ Quarter circle from south to east.
+  | NW    -- ^ Quarter circle from north to west. ◜
+  | SW    -- ^ Quarter circle from south to west. ◟
+  | NE    -- ^ Quarter circle from north to east. ◝
+  | SE    -- ^ Quarter circle from south to east. ◞
   deriving (Eq, Ord, Show)
 
 -- TODO:
@@ -26,6 +26,8 @@ solve p = runSMT do
   constrain $ validSolution p b
   query $ checkSat >>= \case
     Sat -> do
+      sol <- getSolution b
+      liftIO . putStr . prettySolution $ sol
       -- print coloring
       liftIO . print =<< mapM (mapM (getValue . large)) b
       -- print distances
@@ -34,7 +36,7 @@ solve p = runSMT do
       liftIO . print =<< mapM (mapM getDirection) b
       -- print competing capitals?
       liftIO . print =<< getValue (noCompetingCapitals b)
-      getSolution b
+      return sol
     r -> error $ "Solver said: " ++ show r
 
 getSolution :: Board -> Query Solution
@@ -66,3 +68,20 @@ getDirection (Square _ _ _ _ (Path _ f v) _) = do
 
 data Direction = N | W | S | E
   deriving Show
+
+-- * Pretty printing
+------------------------------------------------------------------------
+
+prettyLine :: Line -> Char
+prettyLine = \case
+  OO -> ' '
+  NW -> '◜'
+  SW -> '◟'
+  NE -> '◝'
+  SE -> '◞'
+
+prettySolution' :: Solution -> [String]
+prettySolution' = map (map prettyLine)
+
+prettySolution :: Solution -> String
+prettySolution = unlines . prettySolution'
