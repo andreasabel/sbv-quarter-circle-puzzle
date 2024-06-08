@@ -19,3 +19,7 @@ allAdjacent rel as = allZip rel as (drop 1 as)
 -- The relation should be symmetric.
 allPairs :: (a -> a -> SBool) -> [a] -> SBool
 allPairs rel as = sAll (allZip rel as) (List1.tail (List1.tails as))
+
+-- | (Row, column) coordinates.
+coordinates :: [[(Int, Int)]]
+coordinates = map (\ r -> map (r,) [0..]) [0..]

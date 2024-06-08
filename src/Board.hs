@@ -289,10 +289,10 @@ crossing vert (Path ld (Direction lf lv)) (Path rd (Direction rf rv)) =
 -- E.g. NW connects to SW and NE, but not to SE or NW.
 --
 linesConnect :: Square -> Square -> SBool
-linesConnect = linesConnect' `on` quadrant
+linesConnect l r = split l .&& split r .=> (linesConnect' `on` quadrant) l r
 
 linesConnect' :: Quadrant -> Quadrant -> SBool
-linesConnect' x y = (north x .== north y) .<+> (west x .== west y)
+linesConnect' x y = sTrue -- (north x .== north y) .<+> (west x .== west y)
 
 -- | Color of the Northern edge.
 northColor :: Square -> Color
@@ -356,3 +356,34 @@ eastPath sq@(Square _ _ (Quadrant _ w) l s) = ite (split sq) (ite w l s) l
 
 -- tupToPath :: (SInteger, SBool, SBool) -> Path
 -- tupToPath (x, y, z) = Path x y z
+
+-- * Testing
+
+board1 :: Board
+board1 =
+  [ [ Square 0 1 qNE (Path 4 dS) (Path 1 dE)
+    , Square 1 0 qSE (Path 0 dO) (Path 1 dE)
+    , Square 0 2 qNE (Path 0 dO) (Path 2 dE)
+    , Square 2 2 qOO (Path 1 dS) pOO
+    ]
+  , [ Square 0 3 qSW (Path 3 dE) (Path 1 dS)
+    , Square 4 0 qNW (Path 1 dS) (Path 2 dN)
+    , Square 4 0 qNE (Path 2 dW) (Path 1 dN)
+    , Square 2 0 qSW (Path 0 dO) (Path 2 dW)
+    ]
+  , [ Square 3 6 qSE (Path 0 dO) (Path 2 dS)
+    , Square 4 6 qSW (Path 0 dO) (Path 1 dS)
+    , Square 4 0 qSE (Path 1 dW) (Path 4 dE)
+    , Square 0 0 qOO (Path 3 dN) pOO
+    ]
+  , [ Square 6 n qSW (Path 1 dE) pOO
+    , Square 6 n qSE (Path 0 dO) pOO
+    , Square 0 n qSW (Path 5 dN) pOO
+    , Square 0 n qSE (Path 4 dN) pOO
+    ]
+  ]
+  where
+    qOO = qNE
+    dO  = dN
+    pOO = Path 0 dO
+    n   = -1

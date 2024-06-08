@@ -7,6 +7,7 @@ import Data.SBV.Control
 import Val
 import Board
 import Valuation
+import Util
 
 type Solution = [[Line]]
 
@@ -23,7 +24,14 @@ data Line
 solve :: Puzzle -> IO Solution
 solve p = runSMT do
   b <- mkBoard p
-  constrain $ validSolution p b
+  -- constrain $ validSolution p b
+  --
+  constrain $ sAll (allAdjacent matchHorizontally) b
+  constrain $ sAll (allAdjacent matchVertically) (transpose b)
+  constrain $ noCompetingCapitals b
+  constrain $ sAll connected (concat b)
+  constrain $ stayInside b
+  constrain $ validValuation b p
   query $ checkSat >>= \case
     Sat -> do
       sol <- getSolution b
