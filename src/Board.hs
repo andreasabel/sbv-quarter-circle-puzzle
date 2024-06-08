@@ -25,11 +25,13 @@
 module Board where
 
 import Control.Monad
-import Data.List     ( tails, transpose )
+import Data.List     ( transpose )
 import Data.SBV
 import GHC.Generics
 -- Experiment iso-deriving:
 -- import Iso.Deriving  ( As(As), Isomorphic, Inject(inj), Project(prj) )
+
+import Util
 
 -- | Info board, containing the solution and other information.
 --
@@ -151,18 +153,6 @@ validColoring b = sAnd
   , sAll connected (concat b)
   , stayInside b
   ]
--- | Test all adjacent squares in a row.
-allAdjacent :: (a -> a -> SBool) -> [a] -> SBool
-allAdjacent rel as = allZip rel as (drop 1 as)
-
--- | Lift binary relation conjunctively to lists.
-allZip :: (a -> a -> SBool) -> [a] -> [a] -> SBool
-allZip rel xs ys = sAnd $ zipWith rel xs ys
-
--- | Test all distinct pairs (choose 2).
--- The relation should be symmetric.
-allPairs :: (a -> a -> SBool) -> [a] -> SBool
-allPairs rel as = sAll (allZip rel as) (tail (tails as))
 
 -- | Invariant of a square:
 -- If any part of the square belongs to a country, it needs to be connected to a capital.
