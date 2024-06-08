@@ -174,6 +174,7 @@ validColoring :: Board -> SBool
 validColoring b = sAnd
   [ sAll (allAdjacent matchHorizontally) b
   , sAll (allAdjacent matchVertically) (transpose b)
+  , allSquares linesConnect b
   , noCompetingCapitals b
   , sAll connected (concat b)
   , stayInside b
@@ -216,8 +217,7 @@ matchVertically ::
   -> Square  -- ^ Botton square.
   -> SBool
 matchVertically t b = sAnd
-  [ linesConnect t b
-  , southColor t .== northColor b
+  [ southColor t .== northColor b
   , crossing sTrue (southPath t) (northPath b)
   , split t .=> noMoving dS (northPath t)
   , split b .=> noMoving dN (southPath b)
@@ -228,8 +228,7 @@ matchHorizontally ::
   -> Square  -- ^ Right square.
   -> SBool
 matchHorizontally l r = sAnd
-  [ linesConnect l r
-  , eastColor l .== westColor r
+  [ eastColor l .== westColor r
   , crossing sFalse (eastPath l) (westPath r)
   , split l .=> noMoving dE (westPath l)
   , split r .=> noMoving dW (eastPath r)
@@ -283,16 +282,23 @@ crossing vert (Path ld (Direction lf lv)) (Path rd (Direction rf rv)) =
 --   , sNot rf .&& rv .== vert .&& rd .== ld + 1  -- going backward (left/up)
 --   ]
 
--- | When do lines of adjacent squares connect?
--- A line crosses two adjacent of the four sectors N, W, S, E of a square.
--- Two lines connect if they share exactly one of these sectors.
--- E.g. NW connects to SW and NE, but not to SE or NW.
+-- | When do lines at the center of 4 adjacent squares connect?
+-- If the number of lines connecting to this center is not exactly one.
 --
-linesConnect :: Square -> Square -> SBool
-linesConnect l r = split l .&& split r .=> (linesConnect' `on` quadrant) l r
+linesConnect :: (Square, Square) -> (Square, Square) -> SBool
+linesConnect (nw, sw) (ne, se) = notExactlyOne
+  (fallingDiag nw)
+  (risingDiag sw)
+  (risingDiag ne)
+  (fallingDiag se)
 
-linesConnect' :: Quadrant -> Quadrant -> SBool
-linesConnect' x y = sTrue -- (north x .== north y) .<+> (west x .== west y)
+-- | Does the square have a falling diagonal (SW or NE quadrant)?
+fallingDiag :: Square -> SBool
+fallingDiag (Square l s (Quadrant n w) _ _) = l ./= s .&& n ./= w
+
+-- | Does the square have a rising diagonal (NW or SE quadrant)?
+risingDiag :: Square -> SBool
+risingDiag (Square l s (Quadrant n w) _ _) = l ./= s .&& n .== w
 
 -- | Color of the Northern edge.
 northColor :: Square -> Color
