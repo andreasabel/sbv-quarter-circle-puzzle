@@ -47,6 +47,11 @@ instance Num Val where
 π :: Val
 π = (0, scale)
 
+-- | Half circle.
+--
+π½ :: Val
+π½ = (0, scale `div` 2)
+
 -- | Quarter circle.
 --
 π¼ :: Val

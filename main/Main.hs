@@ -9,7 +9,42 @@ import Valuation -- (solvable, puzzle)
 import Solution qualified
 import Util
 
-main = do
+thePuzzle :: Puzzle
+thePuzzle =
+  [ [   5,  0,  0,  0, 2+π, 5-π ]
+  , [   0,  0,  0,  0,   0,   0 ]
+  , [   0,  0,  0,  0,   0,  π½ ]
+  , [   0,  0,  0,  π,   0,   0 ]
+  , [ 5-π,  0,  0,  0,   0,   2 ]
+  , [ 2+π,  0, π½,  0,   2,   0 ]
+  ]
+
+main = print =<< Solution.solve thePuzzle
+
+{- solution:
+◟◟  ◞◜
+◟◟◟◞◞◜
+◝◟◟◞◝◟
+◞◜◝◜◝◝
+◞ ◞◟◞◝
+◟◞◜◝◟◜
+[[8,3,3,3,3,4],[-1,8,3,3,8,5],[-1,-1,8,8,-1,5],[-1,6,6,2,2,-1],[1,6,6,2,2,7],[6,6,0,0,7,-1]]
+[[0,3,2,1,0,0],[9,2,3,2,7,1],[5,7,4,5,-2,0],[-1,3,4,0,1,-1],[0,2,3,1,2,0],[0,3,0,1,2,-1]]
+[[W,E,E,E,E,W],[E,N,N,N,W,S],[S,E,N,W,N,W],[W,S,W,W,W,W],[W,W,W,N,W,E],[W,N,N,W,E,W]]
+True
+[[SW,SW,OO,OO,SE,NW]
+,[SW,SW,SW,SE,SE,NW]
+,[NE,SW,SW,SE,NE,SW]
+,[SE,NW,NE,NW,NE,NE]
+,[SE,OO,SE,SW,SE,NE]
+,[SW,SE,NW,NE,SW,NW]]
+
+real	77m57.524s
+user	63m9.098s
+-}
+
+{- debugging
+main_ = do
   -- print . unliteral $ matchHorizontally sq00 sq01
   -- print . unliteral $ matchHorizontally sq01 sq02
   -- print . unliteral $ matchHorizontally sq02 sq03
@@ -67,6 +102,7 @@ main = do
     sq11 = head . tail . head . tail $ board1
     sq12 = head . tail . tail . head . tail $ board1
     sq13 = head . tail . tail . tail . head . tail $ board1
+-}
 
 puzzle2 :: Puzzle
 puzzle2 =
@@ -112,5 +148,3 @@ puzzle8 =
   , [ 2, 0, π, 0 ]
   , [ 0, 0, 0, 0 ]
   ]
-
-main_ = print =<< Solution.solve puzzle1
