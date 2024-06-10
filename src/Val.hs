@@ -10,22 +10,16 @@ import Data.SBV.Internals qualified as SI
 
 type Puzzle = [[Val]]
 
--- | A value is a integer linear combination of 1 and π.
--- Since we deals with quarter circles of area π/4, we
--- scale the coefficients by 4 so they can be integers.
+-- | A value is a integer linear combination of 1 and π/4.
 --
 type Val = (Integer, Integer)
-
--- | Magnification (fixed).
---
-scale = 4
 
 -- | Print a 'Val' as it value in form of linear combination of 1 and π.
 --
 prettyVal :: Val -> String
 prettyVal = \case
     (x, 0) -> show x
-    (0, y) -> if y `mod` scale == 0 then showUnless1 (y `div` scale) ++ "π" else showUnless1 y ++ "π/" ++ show scale
+    (0, y) -> if y `mod` 4 == 0 then showUnless1 (y `div` 4) ++ "π" else showUnless1 y ++ "π/4"
     (x, y) -> prettyVal (x, 0) ++ " + " ++ prettyVal (0, y)
     where
       showUnless1 1 = ""
@@ -45,22 +39,22 @@ instance Num Val where
 -- | Unit circle.
 --
 π :: Val
-π = (0, scale)
+π = (0, 4)
 
 -- | Half circle.
 --
 π½ :: Val
-π½ = (0, scale `div` 2)
+π½ = (0, 2)
 
 -- | Quarter circle.
 --
 π¼ :: Val
-π¼ = (0, scale `div` 4)
+π¼ = (0, 1)
 
 -- | Unit square minus quarter circle.
 --
 π¼ᵒᵖ :: Val
-π¼ᵒᵖ = (1, -scale `div` 4)
+π¼ᵒᵖ = (1, -1)
 
 -- | Simple puzzle solving to a circle.
 --
