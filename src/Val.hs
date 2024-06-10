@@ -24,7 +24,7 @@ scale = 4
 --
 prettyVal :: Val -> String
 prettyVal = \case
-    (x, 0) -> if x `mod` scale == 0 then show (x `div` scale) else show x ++ "/" ++ show scale
+    (x, 0) -> show x
     (0, y) -> if y `mod` scale == 0 then showUnless1 (y `div` scale) ++ "π" else showUnless1 y ++ "π/" ++ show scale
     (x, y) -> prettyVal (x, 0) ++ " + " ++ prettyVal (0, y)
     where
@@ -35,10 +35,10 @@ prettyVal = \case
 -- 'Val' is not really a 'Num' just a kind of vector space (a module).
 --
 instance Num Val where
-  fromInteger i       = (scale * i, 0)
+  fromInteger i       = (i, 0)
   negate (x, y)       = (negate x, negate y)
   (x1, y1) + (x2, y2) = (x1 + x2, y1 + y2)
-  (n, 0) * (x, y)     = (n * x `div` scale, n * y `div` scale)
+  (n, 0) * (x, y)     = (n * x, n * y)
   abs = undefined
   signum = undefined
 
@@ -60,7 +60,7 @@ instance Num Val where
 -- | Unit square minus quarter circle.
 --
 π¼ᵒᵖ :: Val
-π¼ᵒᵖ = (scale, -scale `div` 4)
+π¼ᵒᵖ = (1, -scale `div` 4)
 
 -- | Simple puzzle solving to a circle.
 --
