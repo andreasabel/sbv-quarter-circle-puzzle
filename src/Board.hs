@@ -180,11 +180,11 @@ validColoring :: Board -> SBool
 validColoring b = sAnd
   [ validDivision b
   , matchingColors b
-  , sAll (allAdjacent moveHorizontally) b
-  , sAll (allAdjacent moveVertically) (transpose b)
   , noCompetingCapitals b
   , sAll connected (concat b)
   , stayInside b
+  , sAll (allAdjacent moveHorizontally) b
+  , sAll (allAdjacent moveVertically) (transpose b)
   ]
 
 -- ** Lines need to form closed areas
@@ -262,17 +262,8 @@ westColor (Square l s (Quadrant _ w) _ _) = ite w s l
 eastColor :: Square -> Color
 eastColor (Square l s (Quadrant _ w) _ _) = ite w l s
 
--- **
+-- ** Countries need exactly one capital.
 ------------------------------------------------------------------------
-
--- | Invariant of a square:
--- If any part of the square belongs to a country, it needs to be connected to a capital.
---
-connected :: Square -> SBool
-connected sq = sAnd
-  [ large sq .>= 0 .=> distance (lPath sq) .>= 0
-  , small sq .>= 0 .=> distance (sPath sq) .> 0
-  ]
 
 -- | No country should have two capitals.
 --
@@ -294,27 +285,23 @@ hasCapital i = sAny (isCapitalOf i) . concat
 isCapitalOf :: Color -> Square -> SBool
 isCapitalOf i sq = large sq .== i .&& capital sq
 
-moveVertically ::
-     Square  -- ^ Top square.
-  -> Square  -- ^ Botton square.
-  -> SBool
-moveVertically t b = sAnd
-  [ crossing sTrue (southPath t) (northPath b)
-  , split t .=> noMoving dS (northPath t)
-  , split b .=> noMoving dN (southPath b)
+-- ** Each part of a country needs to be connected to a capital.
+------------------------------------------------------------------------
+
+-- | If any part of the square belongs to a country, it needs to be connected to a capital.
+--   This means that its distance should be defined.
+--
+connected :: Square -> SBool
+connected sq = sAnd
+  [ large sq .>= 0 .=> distance (lPath sq) .>= 0
+  , small sq .>= 0 .=> distance (sPath sq) .> 0
   ]
 
-moveHorizontally ::
-     Square  -- ^ Left square.
-  -> Square  -- ^ Right square.
-  -> SBool
-moveHorizontally l r = sAnd
-  [ crossing sFalse (eastPath l) (westPath r)
-  , split l .=> noMoving dE (westPath l)
-  , split r .=> noMoving dW (eastPath r)
-  ]
+-- ** A path to the capital cannot leave the board.
+------------------------------------------------------------------------
 
--- | Don't leave the board
+-- | No path leaves the board.
+--
 stayInside :: Board -> SBool
 stayInside b = sAnd
   [ sAll noUp    $ head b
@@ -336,31 +323,43 @@ noRight :: Square -> SBool
 noRight sq = noMoving dE (lPath sq) .&& noMoving dE (sPath sq)
 
 -- | Cannot move in the given direction.
+--
 noMoving :: SDirection -> Path -> SBool
 noMoving d1 (Path dist d2) = dist .<= 0 .|| d1 ./= d2
--- noMoving (Direction fwd vert) (Path d (Direction f v)) = d .<= 0 .|| fwd ./= f .|| vert ./= v
+
+-- ** Moving correctly between squares.
+------------------------------------------------------------------------
+
+moveVertically ::
+     Square  -- ^ Top square.
+  -> Square  -- ^ Botton square.
+  -> SBool
+moveVertically t b = sAnd
+  [ crossing sTrue (southPath t) (northPath b)
+  , split t .=> noMoving dS (northPath t)
+  , split b .=> noMoving dN (southPath b)
+  ]
+
+moveHorizontally ::
+     Square  -- ^ Left square.
+  -> Square  -- ^ Right square.
+  -> SBool
+moveHorizontally l r = sAnd
+  [ crossing sFalse (eastPath l) (westPath r)
+  , split l .=> noMoving dE (westPath l)
+  , split r .=> noMoving dW (eastPath r)
+  ]
 
 -- | Crossing a border between two adjacent squares.
+--
+-- Also ensure we decrease the distance when moving a square.
+--
 crossing :: SBool -> Path -> Path -> SBool
 crossing vert (Path ld (Direction lf lv)) (Path rd (Direction rf rv)) =
   sAnd
     [ rd .>= 0 .&& lf      .&& lv .== vert .=> ld .== rd + 1  -- going forward (right/down)
     , ld .>= 0 .&& sNot rf .&& rv .== vert .=> rd .== ld + 1  -- going backward (left/up)
     ]
-  -- ld .>= 0 .&& rd .>= 0 .=> sAnd
-  --   [ lf      .&& lv .== vert .=> ld .== rd + 1  -- going forward (right/down)
-  --   , sNot rf .&& rv .== vert .=> rd .== ld + 1  -- going backward (left/up)
-  --   , sOr
-  --     [ lf      .&& lv .== vert .&& ld .== rd + 1  -- going forward (right/down)
-  --     , sNot rf .&& rv .== vert .&& rd .== ld + 1  -- going backward (left/up)
-  --     ]
-  --   ]
--- crossing vert (Path ld lf lv) (Path rd rf rv) = sOr
---   [ ld .< 0                                    -- not a path
---   , rd .< 0                                    -- not a path
---   , lf      .&& lv .== vert .&& ld .== rd + 1  -- going forward (right/down)
---   , sNot rf .&& rv .== vert .&& rd .== ld + 1  -- going backward (left/up)
---   ]
 
 -- | Path of the Northern edge.
 northPath :: Square -> Path
@@ -378,7 +377,8 @@ westPath sq@(Square _ _ (Quadrant _ w) l s) = ite (split sq) (ite w s l) l
 eastPath :: Square -> Path
 eastPath sq@(Square _ _ (Quadrant _ w) l s) = ite (split sq) (ite w l s) l
 
--- * Boilerplate
+-- -- * Boilerplate
+-- ------------------------------------------------------------------------
 
 -- Mergeable hand-implemented:
 
@@ -411,6 +411,8 @@ eastPath sq@(Square _ _ (Quadrant _ w) l s) = ite (split sq) (ite w l s) l
 
 -- * Testing
 
+-- | TODO: this manual solution might have bugs still...
+--
 board1 :: Board
 board1 =
   [ [ Square 0 1 qNE (Path 4 dS) (Path 1 dE)
