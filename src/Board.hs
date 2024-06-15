@@ -178,13 +178,17 @@ mkDirection prefix = Direction
 --
 validColoring :: Board -> SBool
 validColoring b = sAnd
+  -- correct map
   [ validDivision b
   , matchingColors b
+  -- connected to unique capitals
   , noCompetingCapitals b
   , sAll connected (concat b)
+  -- correct stepping along paths
   , stayInside b
-  , sAll (allAdjacent moveHorizontally) b
-  , sAll (allAdjacent moveVertically) (transpose b)
+  , sAll noCrossing (concat b)
+  , sAll (allAdjacent movingHorizontally) b
+  , sAll (allAdjacent movingVertically) (transpose b)
   ]
 
 -- ** Lines need to form closed areas
@@ -327,35 +331,55 @@ noRight sq = noMoving dE (lPath sq) .&& noMoving dE (sPath sq)
 noMoving :: SDirection -> Path -> SBool
 noMoving d1 (Path dist d2) = dist .<= 0 .|| d1 ./= d2
 
+-- ** Cannot cross a border (which is a division in a square).
+------------------------------------------------------------------------
+
+-- | If split, cannot move east from the western part
+noCrossing :: Square -> SBool
+noCrossing sq = split sq .=> sAnd
+  [ noMoving dN (southPath_ sq)
+  , noMoving dW (eastPath_  sq)
+  , noMoving dS (northPath_ sq)
+  , noMoving dE (westPath_  sq)
+  ]
+
+-- | Path of the Northern edge in a split square.
+northPath_ :: Square -> Path
+northPath_ sq@(Square _ _ (Quadrant n _) l s) = ite n s l
+
+-- | Path of the Southern edge in a split square.
+southPath_ :: Square -> Path
+southPath_ sq@(Square _ _ (Quadrant n _) l s) = ite n l s
+
+-- | Path of the Western edge in a split square.
+westPath_  :: Square -> Path
+westPath_  sq@(Square _ _ (Quadrant _ w) l s) = ite w s l
+
+-- | Path of the Eastern edge in a split square.
+eastPath_  :: Square -> Path
+eastPath_  sq@(Square _ _ (Quadrant _ w) l s) = ite w l s
+
 -- ** Moving correctly between squares.
 ------------------------------------------------------------------------
 
-moveVertically ::
-     Square  -- ^ Top square.
-  -> Square  -- ^ Botton square.
-  -> SBool
-moveVertically t b = sAnd
-  [ crossing sTrue (southPath t) (northPath b)
-  , split t .=> noMoving dS (northPath t)
-  , split b .=> noMoving dN (southPath b)
-  ]
-
-moveHorizontally ::
+-- | Step to a horizontal neighbor.
+movingHorizontally ::
      Square  -- ^ Left square.
   -> Square  -- ^ Right square.
   -> SBool
-moveHorizontally l r = sAnd
-  [ crossing sFalse (eastPath l) (westPath r)
-  , split l .=> noMoving dE (westPath l)
-  , split r .=> noMoving dW (eastPath r)
-  ]
+movingHorizontally l r = moving sFalse (eastPath l) (westPath r)
 
--- | Crossing a border between two adjacent squares.
+-- | Step to a vertical neighbor.
+movingVertically ::
+     Square  -- ^ Top square.
+  -> Square  -- ^ Botton square.
+  -> SBool
+movingVertically t b = moving sTrue (southPath t) (northPath b)
+
+-- | Move between two adjacent squares, decreasing the distance.
 --
--- Also ensure we decrease the distance when moving a square.
---
-crossing :: SBool -> Path -> Path -> SBool
-crossing vert (Path ld (Direction lf lv)) (Path rd (Direction rf rv)) =
+moving :: SBool -> Path -> Path -> SBool
+moving vert (Path ld (Direction lf lv)) (Path rd (Direction rf rv)) =
   sAnd
     [ rd .>= 0 .&& lf      .&& lv .== vert .=> ld .== rd + 1  -- going forward (right/down)
     , ld .>= 0 .&& sNot rf .&& rv .== vert .=> rd .== ld + 1  -- going backward (left/up)
