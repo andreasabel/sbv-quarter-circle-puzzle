@@ -6,15 +6,16 @@ import Data.Bifunctor (first)
 import Data.Data (Data)
 import Data.SBV
 import Data.SBV.Internals (SBV(SBV), CV)
-import Data.SBV.Internals qualified as SI
 
+-- | Puzzle is a quadratic board whose squares are annotated with values.
+--
 type Puzzle = [[Val]]
 
 -- | A value is a integer linear combination of 1 and π/4.
 --
 type Val = (Integer, Integer)
 
--- | Print a 'Val' as it value in form of linear combination of 1 and π.
+-- | Print a 'Val' as it value in form of linear combination of 1 and π/4 (or π).
 --
 prettyVal :: Val -> String
 prettyVal = \case

@@ -1,4 +1,4 @@
--- | The board contains the solution in a form benefitial for SMT
+-- | The board contains the solution in a form beneficial for SMT
 -- plus auxiliary data we need to verify the correctness of the solution.
 --
 -- A square contains information how the square is divided into two parts
@@ -11,13 +11,13 @@
 -- The information in the squares partitions the board into areas.
 -- The areas should form connected countries.
 -- So, each country should have a captial square,
--- and each other square should have a finite path to this capital.
+-- and each other square belonging to the country should have a finite path to this capital.
 -- We represent these paths locally in a square
 -- by a distance to the capital (to rule out infinite paths),
--- and a direction where the capital lies.
+-- and a direction in which the capital lies.
 -- Going in this direction brings us a step closer to the capital.
 --
--- Let us assume the tourist seeking the capital looks SE,
+-- Let us assume a traveller seeking the capital looks SE,
 -- then he can step to an adjacent square by being told
 -- whether to move horizontally or vertically,
 -- and whether to go forward or backward.
@@ -55,6 +55,8 @@ data Square = Square
   , sPath    :: Path      -- ^ A path from the smaller part to its capital.
   }
 
+-- | The two main axes divide a square into four quadrants: NW SW NE SE.
+--
 data Quadrant = Quadrant
   { north    :: SBool     -- ^ Northern hemisphere?  (Or southern?)
   , west     :: SBool     -- ^ Western hemisphere?   (Or eastern?)
@@ -65,8 +67,8 @@ data Quadrant = Quadrant
 --
 -- Irrelevant if we are neutral territory.
 data Path = Path
-  { distance  :: SInteger   -- ^ How far to the capital?  If zero, then we are at the capital.
-                            --   If negative, we are not connected to a capital (neutral territory).
+  { distance  :: SInteger    -- ^ How far to the capital?  If zero, then we are at the capital.
+                             --   If negative, we are not connected to a capital (neutral territory).
   , direction :: SDirection  -- ^ Direction (N,W,S,E) for the next step.
   }
   deriving (Generic, Mergeable)
@@ -134,7 +136,7 @@ mkBoard = zipWithM mkRow [0..]
 -- | Create an empty row of the given shape.
 --
 mkRow :: Int -> [a] -> Symbolic [Square]
-mkRow row colShape = zipWithM (\ col _ -> mkSquare row col ) [0..] colShape
+mkRow row colShape = zipWithM (\ col _ -> mkSquare row col) [0..] colShape
 
 -- | Create an empty square at the given coordinates.
 --
@@ -148,40 +150,124 @@ mkSquare row col = Square
   where
     name s = concat [ s, "[", show row, ",", show col, "]" ]
 
+-- | Given a name prefix, create an empty symbolic quadrant.
+--
 mkQuadrant :: String -> Symbolic Quadrant
 mkQuadrant prefix = Quadrant
     <$> symbolic (prefix ++ ".North")
     <*> symbolic (prefix ++ ".West")
 
 -- | Given a name prefix, create an empty symbolic 'Path'.
+--
 mkPath :: String -> Symbolic Path
 mkPath prefix = Path
     <$> symbolic (prefix ++ ".Distance")
     <*> mkDirection prefix
 
 -- | Given a name prefix, create an empty symbolic 'Direction'.
+--
 mkDirection :: String -> Symbolic SDirection
 mkDirection prefix = Direction
     <$> symbolic (prefix ++ ".Forward")
     <*> symbolic (prefix ++ ".Vertical")
 
--- * Constraining the board: adjacent squares need to fit
+-- * Constraining the board
 ------------------------------------------------------------------------
 
--- | Do the colors of the squares fit together?
+-- | Is the board partitioned correctly into countries?
 --
 validColoring :: Board -> SBool
 validColoring b = sAnd
-  [ sAll (allAdjacent matchHorizontally) b
-  , sAll (allAdjacent matchVertically) (transpose b)
-  , allSquares linesConnect b
+  [ validDivision b
+  , matchingColors b
+  , sAll (allAdjacent moveHorizontally) b
+  , sAll (allAdjacent moveVertically) (transpose b)
   , noCompetingCapitals b
   , sAll connected (concat b)
   , stayInside b
   ]
 
+-- ** Lines need to form closed areas
+------------------------------------------------------------------------
+
+-- | A board is divided correctly into areas if no line suddenly ends.
+--
+validDivision :: Board -> SBool
+validDivision = allSquares linesConnect
+
+-- | When do lines at the center of 4 adjacent squares connect?
+-- If the number of lines connecting to this center is not exactly one.
+--
+linesConnect :: (Square, Square) -> (Square, Square) -> SBool
+linesConnect (nw, sw) (ne, se) = notExactlyOne
+  (fallingDiag nw)
+  (risingDiag sw)
+  (risingDiag ne)
+  (fallingDiag se)
+
+-- | Does the square have a falling diagonal (SW or NE quadrant)?
+fallingDiag :: Square -> SBool
+fallingDiag (Square l s (Quadrant n w) _ _) = l ./= s .&& n ./= w
+
+-- | Does the square have a rising diagonal (NW or SE quadrant)?
+risingDiag :: Square -> SBool
+risingDiag (Square l s (Quadrant n w) _ _) = l ./= s .&& n .== w
+
+-- ** Adjacent areas need to match in color
+------------------------------------------------------------------------
+
+-- | Horizontal and vertical neighbors needs to have matching colors.
+--
+matchingColors :: Board -> SBool
+matchingColors b = sAnd
+  [ sAll (allAdjacent matchHorizontally) b
+  , sAll (allAdjacent matchVertically) (transpose b)
+  ]
+
+-- | When do two horizontally adjacent squares match?
+--
+-- The east edge of the left square needs to have
+-- the same color as the west edge of the right square.
+--
+matchHorizontally ::
+     Square  -- ^ Left square.
+  -> Square  -- ^ Right square.
+  -> SBool
+matchHorizontally l r = eastColor l .== westColor r
+
+-- | When do two vertically adjacent squares match?
+--
+-- The south edge of the top square needs to have
+-- the same color as the north edge of the bottom square.
+--
+matchVertically ::
+     Square  -- ^ Top square.
+  -> Square  -- ^ Botton square.
+  -> SBool
+matchVertically t b = southColor t .== northColor b
+
+-- | Color of the Northern edge.
+northColor :: Square -> Color
+northColor (Square l s (Quadrant n _) _ _) = ite n s l
+
+-- | Color of the Southern edge.
+southColor :: Square -> Color
+southColor (Square l s (Quadrant n _) _ _) = ite n l s
+
+-- | Color of the Western edge.
+westColor :: Square -> Color
+westColor (Square l s (Quadrant _ w) _ _) = ite w s l
+
+-- | Color of the Eastern edge.
+eastColor :: Square -> Color
+eastColor (Square l s (Quadrant _ w) _ _) = ite w l s
+
+-- **
+------------------------------------------------------------------------
+
 -- | Invariant of a square:
 -- If any part of the square belongs to a country, it needs to be connected to a capital.
+--
 connected :: Square -> SBool
 connected sq = sAnd
   [ large sq .>= 0 .=> distance (lPath sq) .>= 0
@@ -208,28 +294,22 @@ hasCapital i = sAny (isCapitalOf i) . concat
 isCapitalOf :: Color -> Square -> SBool
 isCapitalOf i sq = large sq .== i .&& capital sq
 
--- | When do two vertically adjacent squares match?
---
--- The south edge of the top square needs to have
--- the same color as the north edge of the bottom square.
-matchVertically ::
+moveVertically ::
      Square  -- ^ Top square.
   -> Square  -- ^ Botton square.
   -> SBool
-matchVertically t b = sAnd
-  [ southColor t .== northColor b
-  , crossing sTrue (southPath t) (northPath b)
+moveVertically t b = sAnd
+  [ crossing sTrue (southPath t) (northPath b)
   , split t .=> noMoving dS (northPath t)
   , split b .=> noMoving dN (southPath b)
   ]
--- | When do two horizontally adjacent squares match?
-matchHorizontally ::
+
+moveHorizontally ::
      Square  -- ^ Left square.
   -> Square  -- ^ Right square.
   -> SBool
-matchHorizontally l r = sAnd
-  [ eastColor l .== westColor r
-  , crossing sFalse (eastPath l) (westPath r)
+moveHorizontally l r = sAnd
+  [ crossing sFalse (eastPath l) (westPath r)
   , split l .=> noMoving dE (westPath l)
   , split r .=> noMoving dW (eastPath r)
   ]
@@ -281,40 +361,6 @@ crossing vert (Path ld (Direction lf lv)) (Path rd (Direction rf rv)) =
 --   , lf      .&& lv .== vert .&& ld .== rd + 1  -- going forward (right/down)
 --   , sNot rf .&& rv .== vert .&& rd .== ld + 1  -- going backward (left/up)
 --   ]
-
--- | When do lines at the center of 4 adjacent squares connect?
--- If the number of lines connecting to this center is not exactly one.
---
-linesConnect :: (Square, Square) -> (Square, Square) -> SBool
-linesConnect (nw, sw) (ne, se) = notExactlyOne
-  (fallingDiag nw)
-  (risingDiag sw)
-  (risingDiag ne)
-  (fallingDiag se)
-
--- | Does the square have a falling diagonal (SW or NE quadrant)?
-fallingDiag :: Square -> SBool
-fallingDiag (Square l s (Quadrant n w) _ _) = l ./= s .&& n ./= w
-
--- | Does the square have a rising diagonal (NW or SE quadrant)?
-risingDiag :: Square -> SBool
-risingDiag (Square l s (Quadrant n w) _ _) = l ./= s .&& n .== w
-
--- | Color of the Northern edge.
-northColor :: Square -> Color
-northColor (Square l s (Quadrant n _) _ _) = ite n s l
-
--- | Color of the Southern edge.
-southColor :: Square -> Color
-southColor (Square l s (Quadrant n _) _ _) = ite n l s
-
--- | Color of the Western edge.
-westColor :: Square -> Color
-westColor (Square l s (Quadrant _ w) _ _) = ite w s l
-
--- | Color of the Eastern edge.
-eastColor :: Square -> Color
-eastColor (Square l s (Quadrant _ w) _ _) = ite w l s
 
 -- | Path of the Northern edge.
 northPath :: Square -> Path
