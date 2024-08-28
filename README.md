@@ -13,3 +13,6 @@ Files:
 - [Entry point](main/Main.hs)
 
 See comments for the representation of the board and the constraints that classify valid solutions.
+
+`stack run` solves the puzzle via a `z3` call.
+Warning!  On my machine (2016 Intel macBook) it took almost one hour.
